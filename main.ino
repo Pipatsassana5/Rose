@@ -2,7 +2,6 @@
 #include <BH1750.h>
 #include <SHT21.h>
 #include "wifisetup.h"
-#include "output.h"
 #include "HTTP.h"
 // === การกำหนดค่า I2C สำหรับ Light Sensor (BH1750) ===
 #define LIGHT_SDA_PIN 18 
@@ -42,7 +41,7 @@ void setup() {
 
 void loop() {
   // === อ่านค่าจาก Light Sensor (BH1750) บน I2C Controller 1 ===
-  checkRelayStatus();
+  
   float lux = lightMeter.readLightLevel(); 
   Serial.print("Light: ");
   Serial.print(lux);
@@ -70,9 +69,11 @@ void loop() {
   if (currentMillis - previousMillis >= postInterval) {
     previousMillis = currentMillis;
     
+    
     // ตรวจสอบว่ายังเชื่อมต่อ Wi-Fi อยู่
     if (WiFi.status() == WL_CONNECTED) {
-
+      checkPumpStatus();
+      checkLightStatus();
       sendDataToFlask(temp, humidity, lux, Soil); // ส่งข้อมูล
     } else {
       Serial.println("WiFi disconnected. Reconnecting...");

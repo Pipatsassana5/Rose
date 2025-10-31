@@ -2,13 +2,14 @@
 #include <ArduinoJson.h>
 #include "output.h"
 
-const char* serverHost = "192.168.1.50"; // <--- แก้ไข
+const char* serverHost = "192.168.1.113"; // <--- แก้ไข
 const int serverPort = 3000;
 const char* apiPath = "/record/create";
 const char* controlPath = "/control/relay/32"; 
+const char* controlPath2 = "/control/relay/33"; 
 
-// ตั้งค่าเวลาในการส่งข้อมูล (ทุก 5 min)
-const long postInterval = 300000;
+// ตั้งค่าเวลาในการส่งข้อมูล (ทุก 1 min)
+const long postInterval = 60000;
 unsigned long previousMillis = 0;
 
 void sendDataToFlask(float temp, float humidity, float lux, float Soil) {
@@ -53,7 +54,7 @@ void sendDataToFlask(float temp, float humidity, float lux, float Soil) {
 }
 
 
-void checkRelayStatus() {
+void checkPumpStatus() {
   HTTPClient http;
   
   String serverUrl = "http://" + String(serverHost) + ":" + String(serverPort) + String(controlPath);
@@ -85,9 +86,54 @@ void checkRelayStatus() {
     if (status == "ON") {
       OnPump();
       Serial.println("-> PUMP SET TO HIGH (ON)");
-    } else {
+    } else if (status == "OFF") {
       digitalWrite(Pump, LOW);
       Serial.println("-> GPIO SET TO LOW (OFF)");
+    }
+
+  } else {
+    Serial.print("HTTP GET Error Code: ");
+    Serial.println(httpResponseCode);
+  }
+
+  http.end();
+}
+
+void checkLightStatus() {
+  HTTPClient http;
+  
+  String serverUrl = "http://" + String(serverHost) + ":" + String(serverPort) + String(controlPath2);
+  http.begin(serverUrl);
+
+  Serial.print("Checking relay status from: ");
+  Serial.println(serverUrl);
+
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    Serial.print("Received status: ");
+    Serial.println(payload);
+
+    // ใช้ ArduinoJson ในการ Parse JSON Response
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.c_str());
+      return;
+    }
+
+    String status = doc["status"].as<String>();
+    
+    // 2. สั่งการ GPIO ตามสถานะที่ได้รับจาก Server
+    if (status == "ON") {
+      OnLight();
+      Serial.println("-> LIGHT SET TO HIGH (ON)");
+    } else if (status == "OFF") {
+      digitalWrite(Light, LOW);
+      Serial.println("-> LIGHT SET TO LOW (OFF)");
     }
 
   } else {

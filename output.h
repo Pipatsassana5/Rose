@@ -4,7 +4,7 @@
 #define Light 33
 void OnPump() {
   digitalWrite(Pump, HIGH);
-  delay(2000);
+  delay(5000);
   digitalWrite(Pump, LOW);
 }
 
